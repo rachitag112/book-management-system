@@ -1,59 +1,89 @@
 const express = require("express");
 const router = express.Router();
-
-// Axios allows us to make HTTP requests from our app
-const axios = require("axios").default;
+const bookModel = require('../src/book_model');
+const path = require('path');
 
 // Handle a GET request to the root directory,
 // and send "Hello World" as a response
 router.get("/", (req, res) => {
-  res.send("Hello World!");
+  res.sendFile(path.join(__dirname + '/index.html'))
 });
 
-// Handle a GET request to /github/USERNAME, where
-// USERNAME can be any GitHub username.
-// Try https://localhost:3000/gh/twilioquest in your browser!
-// `:username` is a route parameter: whatever is entered in the url
-// after github/ will be stored as a variable called `username`.
-router.get("/github/:username", (req, res) => {
-  // Get the value of the route parameter.
-  // It lives in `req` because the URL is part of the request.
-  // `params` means parameters, the parameters of the requested URL.
-  // `username` is what we named the route parameter in the route above.
-  let username = req.params.username;
+// GET all the books
+router.get('/books', async function (req, res) {
+   const bookList = await bookModel.find();
+   res.send(bookList);
+});
 
-  // Use Axios to make a GET request to the GitHub API
-  axios
-    .get(`https://api.github.com/users/${username}`)
-    // here `response` is the response we get from the GitHub API,
-    // Not to be confused with `res`, which is the response for our own app.
-    .then((response) => {
-      // The response will have headers and a body. We get the body using `data`.
-      let public_repos = response.data.public_repos;
-      // Now we can use the response from the GitHub API to build our own response.
-      res.send(
-        `${username} has ${public_repos} public repositories on GitHub.`
-      );
-    })
-    .catch((error) => {
-      console.log(error);
+// GET the specified book
+router.get('/books/:id', async function (req, res) {
+    const { id } = req.params;
+    const book = await bookModel.findOne({id : id});
+    if(!book) return res.send("Book Not Found");
+    res.send(book);
+});
+
+// ADD a book
+router.post('/books', async function (req, res) {
+  const id = req.params.id;
+  const title = req.params.title;
+  const author = req.params.author;
+  const pages = req.params.pages;
+  const year = req.params.year;
+  
+  const bookExist = await bookModel.findOne({id : id});
+
+  if (bookExist) return res.send('Book already exist');
+  let data = await bookModel.create({id,title,author,pages,year});
+  data.save();
+  res.send("Book Uploaded");  
+});
+
+// UPDATE specified book
+router.put('/books/:id', async function (req, res) {
+    const { id } = req.params;
+    const {
+        title,
+        authors,
+        pages,
+        year
+    } = req.body;
+    const bookExist = await bookModel.findOne({id : id});
+    if (!bookExist) return res.send('Book Do Not exist');
+    const updateField = (val, prev) => !val ? prev : val;
+    const updatedBook = {
+      ...bookExist,
+      title: updateField(title, bookExist.title),
+      authors: updateField(authors, bookExist.authors),
+      pages: updateField(pages, bookExist.pages),
+      year: updateField(year, bookExist.year),
+    };
+    await bookModel.updateOne(
+      { id: id },
+      {
+        $set: {
+          title: updatedBook.title,
+          author: updatedBook.authors,
+          pages: updatedBook.pages,
+          year: updatedBook.year
+        },
+      }
+    );
+    
+    res.status(200).send("Book Updated");
+});
+
+// DELETE the specified book
+router.delete('/books/:id', async function (req, res) {
+    const { id } = req.params;
+    const bookExist = await bookModel.findOne({id : id});
+    if (!bookExist) return res.send('Book Do Not exist');
+   await bookModel.deleteOne({ isbn: id }).then(function(){
+      res.send("Book Record Deleted Successfully")
+    }).catch(function(error){
+      console.log(error); // Failure
     });
 });
 
-// Handle a POST request to /sms, assume it is a Twilio webhook, and send
-// TWiML in response that creates an SMS reply.
-// REMEMBER: you will have to use ngrok to expose your app to the internet before you can use it with Twilio.
-router.post("/sms", (req, res) => {
-  console.log(
-    `Message received from ${req.body.From}, containing ${req.body.Body}`
-  );
-
-  res.type(`text/xml`);
-  res.send(`
-    <Response>
-    <Message>We received your message!</Message>
-    </Response>
-    `);
-});
 
 module.exports = router;

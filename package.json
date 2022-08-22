@@ -1,18 +1,18 @@
 {
-  "name": "express-starter",
+  "name": "book-management-system",
   "version": "1.0.0",
-  "description": "An Express Starter project for Operator Academy",
+  "description": "A Book Management System with NodeJS and Express",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "nodemon -e js index.js"
   },
-  "author": "joenash",
+  "author": "rachitag112",
   "license": "MIT",
   "dependencies": {
-    "axios": "^0.27.2",
+    "body-parser": "^1.20.0",
     "express": "^4.18.1",
-    "twilio": "^3.80.0"
+    "mongoose": "^6.5.2"
   },
   "devDependencies": {
     "nodemon": "^2.0.19"
